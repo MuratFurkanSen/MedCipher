@@ -3,6 +3,7 @@
 #include <stdexcept>
 RelationshipReference relationship_reference(const std::vector<double>& x, const std::vector<double>& y) {
     if (x.empty() || x.size()!=y.size()) throw std::invalid_argument("Paired inputs must have equal nonzero length");
+    for(std::size_t i=0;i<x.size();++i) if(!std::isfinite(x[i]) || !std::isfinite(y[i])) throw std::invalid_argument("Nonfinite relationship input");
     long double mx=0,my=0;
     for (std::size_t i=0;i<x.size();++i) { mx+=x[i]; my+=y[i]; }
     mx/=x.size(); my/=x.size();
