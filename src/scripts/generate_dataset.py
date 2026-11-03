@@ -70,7 +70,7 @@ def main():
     parser.add_argument(
         "--output-dir", type=Path, default=Path(__file__).resolve().parents[1] / "data"
     )
-    parser.add_argument("--sizes", type=int, nargs="+", default=[100, 1000, 10000])
+    parser.add_argument("--sizes", type=int, nargs="+", default=[1000, 10000, 100000])
     args = parser.parse_args()
     if args.seed < 0:
         parser.error("--seed must be nonnegative")
