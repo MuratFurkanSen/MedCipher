@@ -1,4 +1,5 @@
 #include "Benchmark.h"
+#include "Acceptance.h"
 #include "Timing.h"
 #include "../crypto/CKKSContext.h"
 #include "../data/CSVReader.h"
@@ -17,6 +18,7 @@
 #include <sstream>
 #include <filesystem>
 #include <unistd.h>
+#include <sys/wait.h>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
@@ -112,7 +114,8 @@ static bool benchmark(CKKSContext& crypto, const std::string& data_dir, const st
         if (relationships) second_column = read_numeric_column(data_dir + "/" + name, "systolic_bp");
         if (scoring) score_columns=load_score_columns(data_dir + "/" + name);
         for (int i = 0; i < warmups; ++i) {
-            if (!measure(crypto, values).passed) throw std::runtime_error("Warmup correctness failure: " + name);
+            auto run = measure(crypto, values);
+            if (!benchmark_run_acceptable(run, relationships)) throw std::runtime_error("Warmup correctness or correlation eligibility failure: " + name + " (" + run.status + ")");
         }
         std::array<std::vector<double>, 9> samples;
         SumMeanRun last;
@@ -121,7 +124,7 @@ static bool benchmark(CKKSContext& crypto, const std::string& data_dir, const st
         bool passed = true;
         for (int i = 0; i < repetitions; ++i) {
             last = measure(crypto, values);
-            passed = passed && last.passed;
+            passed = passed && benchmark_run_acceptable(last, relationships);
             if(scoring || polynomial){
                 max_score_error=std::max(max_score_error,score_result.max_absolute_error);
                 mean_score_error+=score_result.mean_absolute_error/repetitions;
@@ -216,22 +219,39 @@ bool benchmark_polynomial(CKKSContext& crypto,const std::string& data_dir,const 
 
 
 
-bool benchmark_all(const std::string& data_dir, const std::string& results_dir) {
+bool benchmark_all(const std::string& data_dir, const std::string& results_dir, const std::string& executable) {
     namespace fs=std::filesystem;
     fs::path dir(results_dir);
     if(!fs::is_directory(dir)) throw std::runtime_error("Results directory does not exist");
-    const std::vector<std::string> names={"scenario1.csv","scenario2.csv","scenario3.csv","scenario4.csv","scenario5.csv"};
+    const std::vector<std::string> names={"scenario1.csv","scenario2.csv","scenario3.csv","scenario4.csv","scenario5.csv","manifest.json"};
     for(const auto& name:names) if(fs::exists(dir/name)) throw std::runtime_error("Results already exist: "+(dir/name).string());
     auto pattern=(dir/".medcipher-benchmark.XXXXXX").string();
     std::vector<char> tmp(pattern.begin(),pattern.end()); tmp.push_back('\0');
     if(!mkdtemp(tmp.data())) throw std::runtime_error("Cannot create benchmark staging directory");
     fs::path stage(tmp.data()); std::vector<fs::path> published;
     try {
+        auto provenance = [&](const char* action) {
+            const auto cpu = cpu_model();
+            const auto stage_path = stage.string();
+            pid_t pid = fork();
+            if (pid < 0) throw std::runtime_error("Cannot start provenance collection");
+            if (pid == 0) {
+                execl(MEDCIPHER_PYTHON, MEDCIPHER_PYTHON, MEDCIPHER_PROVENANCE_SCRIPT, action,
+                      stage_path.c_str(), MEDCIPHER_BUILD_SNAPSHOT, data_dir.c_str(), MEDCIPHER_COMPILER,
+                      MEDCIPHER_BUILD_CONFIG, SEAL_VERSION, cpu.c_str(), executable.c_str(), static_cast<char*>(nullptr));
+                _exit(127);
+            }
+            int status = 0;
+            if (waitpid(pid, &status, 0) < 0 || !WIFEXITED(status) || WEXITSTATUS(status) != 0)
+                throw std::runtime_error("Benchmark provenance collection failed");
+        };
+        provenance("start");
         { CKKSContext crypto(true); if(!benchmark_sum_mean(crypto,data_dir,(stage/names[0]).string())) {fs::remove_all(stage);return false;} }
         { CKKSContext crypto(true); if(!benchmark_variance(crypto,data_dir,(stage/names[1]).string())) {fs::remove_all(stage);return false;} }
         { CKKSContext crypto(true,true); if(!benchmark_relationships(crypto,data_dir,(stage/names[2]).string())) {fs::remove_all(stage);return false;} }
         { CKKSContext crypto; if(!benchmark_scoring(crypto,data_dir,(stage/names[3]).string())) {fs::remove_all(stage);return false;} }
         { CKKSContext crypto(true,true); if(!benchmark_polynomial(crypto,data_dir,(stage/names[4]).string())) {fs::remove_all(stage);return false;} }
+        provenance("finish");
         for(const auto& name:names) {
             auto dest=dir/name;
             if(link((stage/name).c_str(),dest.c_str())!=0) throw std::runtime_error("Cannot publish results: "+dest.string());

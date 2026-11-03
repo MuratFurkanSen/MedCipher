@@ -16,6 +16,14 @@ bool scenario1_tests(CKKSContext& crypto, const char* dir) {
         if(values.size()!=n) throw std::runtime_error("Unexpected record count in "+path);
         pass=run_sum_mean(crypto,values,path) && pass;
     }
+    for (std::size_t n : {4095u, 4096u, 4097u}) {
+        std::vector<double> values(n, 1.0);
+        values.back() = 3.0;
+        const double expected_sum = static_cast<double>(n) + 2.0;
+        auto result = measure_sum_mean(crypto, values);
+        pass = result.passed && std::abs(result.encrypted_sum - expected_sum) <= 0.01
+            && std::abs(result.encrypted_mean - expected_sum / n) <= 0.0001 && pass;
+    }
     return pass;
 }
 bool scenario2_tests(CKKSContext& crypto, const char* dir) {

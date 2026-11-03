@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
         if(mode=="--scenario4") { CKKSContext crypto; return scoring_tests(crypto,MEDCIPHER_DATA_DIR)?0:1; }
         if(mode=="--benchmark") {
             if(std::string(MEDCIPHER_BUILD_CONFIG)!="Release") throw std::runtime_error("Benchmark requires a Release build");
-            return benchmark_all(MEDCIPHER_DATA_DIR,MEDCIPHER_RESULTS_DIR)?0:1;
+            return benchmark_all(MEDCIPHER_DATA_DIR,MEDCIPHER_RESULTS_DIR,argv[0])?0:1;
         }
         std::cerr<<usage; return 1;
     } catch(const std::exception& e) { std::cerr<<"Error: "<<e.what()<<'\n'; return 1; }

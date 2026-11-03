@@ -48,3 +48,17 @@ Scenarios 1, 2 and 4 use polynomial modulus degree 8192, coefficient-modulus bit
 Dataset loading, input packing and normalization, key creation, verification, serialization and CSV writing are outside timed stages. Public coefficient encoding and homomorphic arithmetic are included in evaluation. Uncompressed SEAL serialization measures input ciphertext storage; scenarios 4 and 5 also record final output ciphertext storage. Raw storage counts the input doubles, excluding keys and CSV overhead. Error fields summarize measured runs; parameters, compiler, build and available machine metadata accompany measurements. Timings are single-machine observations, and plaintext ratios can be noisy.
 
 After every scenario succeeds, results are published as `results/scenario1.csv` through `results/scenario5.csv`. Runs are staged before publication; failures do not publish incomplete CSVs. Existing files are never overwritten, so archive or remove them before a new run. Generated results are ignored by Git.
+
+To generate the default fixture set in a separate directory without replacing the supplied files:
+
+```sh
+python3 src/scripts/generate_dataset.py --seed 42 --sizes 1000 10000 100000 --output-dir /tmp/medcipher-generated
+```
+
+The default master size is 100,000. The original seed, Python version, and NumPy version used to create the supplied files have not been independently verified. The current audit environment reports Python 3.15.1; NumPy is not installed in that interpreter. Regeneration has not been verified. SHA-256 hashes of the supplied files are:
+
+- `patients_1K.csv`: `544e5c13d115118d173aa3c9a779aca8ac37faf0d078cff70090c0a0c7bb93ac`
+- `patients_10K.csv`: `0ec40e221e36c4d9a49b6b25296dd4b77b4585a7bc662e0070502bd3c78619ad`
+- `patients_100K.csv`: `190450bfaf7c7466aa3471c1be6b88212e03007bb272bba9e96be26e4bdc29a9`
+
+A benchmark also publishes `results/manifest.json` with source, executable, dataset and result hashes and environment details. Python 3 and Git are required for provenance collection. The benchmark checks that the source snapshot matches the latest build and that source, executable and datasets remain unchanged during the run. It rejects datasets for which correlation is undefined or unsupported.

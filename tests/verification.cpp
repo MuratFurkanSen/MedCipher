@@ -1,4 +1,5 @@
 #include "benchmark/Timing.h"
+#include "benchmark/Acceptance.h"
 #include "data/CSVReader.h"
 #include <cmath>
 #include <iostream>
@@ -9,6 +10,17 @@
 double plaintext_variance(const std::vector<double>& values);
 
 int main() {
+    SumMeanRun relationship;
+    relationship.passed = true;
+    for (const char* status : {"UNSUPPORTED", "UNDEFINED"}) {
+        relationship.status = status;
+        if (benchmark_run_acceptable(relationship, true)) return 1;
+    }
+    relationship.status = "PASS";
+    if (!benchmark_run_acceptable(relationship, true)) return 1;
+    relationship.passed = false;
+    if (benchmark_run_acceptable(relationship, true)) return 1;
+
     if (plaintext_variance({1e12, 1e12, 1e12}) != 0.0 ||
         std::abs(plaintext_variance({1e12 - 0.25, 1e12, 1e12 + 0.25, 1e12}) - 0.03125) > 1e-12 ||
         std::abs(plaintext_variance({2, 4, 4, 4, 5, 5, 7, 9}) - 4.0) > 1e-12) {

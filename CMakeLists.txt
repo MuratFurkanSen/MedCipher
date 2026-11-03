@@ -26,6 +26,15 @@ target_compile_definitions(MedCipher PRIVATE
     MEDCIPHER_BUILD_CONFIG="$<CONFIG>"
     MEDCIPHER_COMPILER="${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+add_custom_command(TARGET MedCipher POST_BUILD
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/src/benchmark/provenance.py" snapshot "${CMAKE_CURRENT_BINARY_DIR}/benchmark-source-snapshot.json"
+    VERBATIM)
+target_compile_definitions(MedCipher PRIVATE
+    MEDCIPHER_PYTHON="${Python3_EXECUTABLE}"
+    MEDCIPHER_PROVENANCE_SCRIPT="${CMAKE_CURRENT_SOURCE_DIR}/src/benchmark/provenance.py"
+    MEDCIPHER_BUILD_SNAPSHOT="${CMAKE_CURRENT_BINARY_DIR}/benchmark-source-snapshot.json")
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(verification tests/verification.cpp src/benchmark/Timing.cpp src/data/CSVReader.cpp src/scenarios/VarianceReference.cpp)
