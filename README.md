@@ -13,7 +13,7 @@ python3 scripts/generate_dataset.py
 python3 scripts/generate_dataset.py --seed 42 --output-dir data --sizes 100 1000 10000
 ```
 
-The defaults write `data/patients_100.csv`, `patients_1000.csv`, and `patients_10000.csv`. A single master dataset with the largest requested size is generated; each smaller CSV contains its first N rows. Seed 42 makes repeated runs reproducible with the same NumPy environment and largest size. Changing the largest size can change the generated measurements.
+The defaults write `data/patients_100.csv`, `patients_1K.csv`, and `patients_10K.csv`. A single master dataset with the largest requested size is generated; each smaller CSV contains its first N rows. Seed 42 makes repeated runs reproducible with the same NumPy environment and largest size. Changing the largest size can change the generated measurements.
 
 | Column | Meaning | Generated bounds |
 | --- | --- | --- |
@@ -90,3 +90,46 @@ The evaluator computes encrypted sums, products and second moments using rotatio
 Scenario 3 uses the same pipeline, five warmups, 30 measured runs, and 1000-iteration plaintext timing batch. Two input columns count toward raw bytes and serialized input bytes. Covariance and correlation share their encrypted moments and are timed jointly; UNSUPPORTED/UNDEFINED rows time covariance-only evaluation and must not be compared as complete correlation workloads. Owner eligibility checking and independent plaintext references do not enter the encrypted timing. Padding and column assembly are outside timed stages. The zero-variance and domain decisions disclose eligibility, not statistics, to the evaluator.
 
 Tests cover the three supplied datasets (explicitly reporting unsupported cases), positive and negative perfect correlation at the public domain boundaries and midpoint, 4097 and 8193 records, constant input, and both low/high out-of-domain inputs. The 8193 fixture crosses the new 8192-slot boundary. Dataset generators and CSV inputs are unchanged. Scenario 4 is not implemented.
+
+## Scenario 4: weighted numerical scoring
+
+Run `MedCipher --scoring-check` for correctness, or `MedCipher --benchmark-scoring` in Release mode to overwrite `results/scenario4.csv`. This scenario uses the original degree-8192 configuration, `{60,40,40,60}` coefficient modulus, scale 2^40, and 4096 slots. No rotation or relinearization keys are needed. It is not mixed with the stronger Scenario 3 measurements.
+
+The fixed public weights are heart_rate **0.25**, systolic_bp **0.30**, glucose **0.30**, and bmi **0.15**. These weights define an illustrative numerical experiment, **not a clinically validated medical risk model**.
+
+All four columns are encrypted independently in contiguous, zero-padded chunks. The evaluator receives only ciphertexts, the public SEAL context, chunk count, scale and fixed weights. Each ciphertext is multiplied by a plaintext-encoded public weight and rescaled once; equal levels/scales allow addition of the four weighted terms. The owner decrypts only the final score ciphertexts, decodes all slots and removes final padding. The returned score vector contains exactly one score per input record, in input order; no private measurement or intermediate decryption is exposed to the evaluator.
+
+Correctness compares every score with an independent long-double weighted reference expressed as `(25*x1 + 30*x2 + 30*x3 + 15*x4)/100`. The fixed absolute tolerance is **1e-5**, well below the 0.1-unit dataset resolution and the smallest 0.015 score change from a one-step input change. Maximum/mean absolute error and maximum relative error are reported. For an exactly zero reference, the relative-error field uses absolute error instead. Tests include all three datasets, known independent outputs for isolated columns, signed/zero values and lengths 1, 4095, 4096, 4097 and 8193.
+
+The benchmark reuses the existing steady-clock pipeline, 5 warmups, 30 repetitions and 1000-iteration plaintext batch. Reference-vector allocation, CSV loading, column assembly/padding, setup/keys, verification, serialization and output are outside the measured stages. Encoding covers input encoding; public-weight encoding, multiplication, rescaling and addition belong to homomorphic computation. Decryption covers final score ciphertexts only. Decoding covers all their slots and concatenation; trimming padding is outside the stage. Input storage counts all four columns and every encrypted chunk. Output storage is the sum of actual uncompressed SEAL serializations of final score ciphertexts, measured outside timed stages; the output ciphertext count is also recorded.
+
+In the summary CSV, maximum errors are maxima over all records and all 30 measured repetitions; mean absolute error averages over those same records and repetitions. Timing statistics retain the existing median/mean/population-standard-deviation columns. Per-record results are computed and verified in memory; this file contains experimental summaries, not individual scores. Existing Scenario 1–3 result files are preserved. Scenario 5 is described below.
+
+
+## Scenario 5: bounded polynomial evaluation
+
+Run `MedCipher --polynomial-check` for correctness or `MedCipher --benchmark-polynomial` in Release mode to write `results/scenario5.csv`. Each degree has a separate 5-warmup/30-measured-run experiment for each dataset. The CSV contains 81 metric rows (3 degrees × 3 datasets × 9 metrics); degrees are never pooled into a performance result. Earlier result files are not overwritten.
+
+The owner uses the fixed public transformation **z = (glucose − 157.5) / 92.5**, mapping the documented synthetic glucose bounds [65,250] to [-1,1]. Empty, nonfinite and out-of-domain inputs are rejected, not clamped. Normalization is performed before encryption, outside timed stages, just like input packing; both plaintext and encrypted evaluation receive the same normalized values. It uses no dataset-derived statistics. The encrypted evaluator receives only normalized ciphertexts, public context/degree/scale, and a relinearization key. It never receives plaintext measurements or the secret key and never decrypts. The owner decrypts only final outputs, one value per record.
+
+The fixed numerical examples are:
+
+- P2(z) = 1 + z/2 + z²/4.
+- P3(z) = P2(z) + z³/8.
+- P5(z) = P3(z) + z⁴/16 + z⁵/32.
+
+These are **not clinically validated medical models**. They are bounded and positive on [-1,1]: all selected outputs lie between 1/32 and 63/32 by a conservative coefficient-sum bound. Consequently relative errors are well-defined, including at z=0. The fixed absolute tolerance is **1e-5**, about five parts per million of the maximum output; it is an experimental precision target and was not changed after testing. References use independent long-double Horner evaluation in a separate translation unit; encrypted evaluation uses balanced powers.
+
+All degrees reuse the existing stronger configuration: polynomial modulus degree **16384**, coefficient bits **{60,35,35,35,35,35,35,35,35,35,60}** (435 total, below SEAL's 438-bit limit at its default 128-bit security setting), scale **2^35**, and 8192 slots. This chain is intentionally reused and overprovisioned for these smaller circuits; these experiments compare degrees under identical parameters, not minimal-cost parameter sets. No earlier scenario configuration changes.
+
+The evaluator builds z², z³, and, when needed, z⁴ and z⁵ with balanced ciphertext multiplications, relinearizing and rescaling each result. Lower-level operands are aligned by modulus switching. Each power is multiplied by its public coefficient with an encoding scale calculated from the actual rescaling prime, giving a shared output scale. Weighted powers are added, then the public constant term is added. No extra multiplications are inserted to inflate depth.
+
+| Degree | Ciphertext multiplication depth | Rescaling levels consumed | Input → output chain index | Ciphertext multiplications per chunk | Total rescale calls per chunk |
+| --- | --- | --- | --- | --- | --- |
+| 2 | 1 | 2 | 9 → 7 | 1 | 3 |
+| 3 | 2 | 3 | 9 → 6 | 2 | 5 |
+| 5 | 3 | 4 | 9 → 5 | 4 | 9 |
+
+Depths and chain indices are checked against the actual ciphertext context at runtime. CSV fields record those observations, total ciphertext multiplications/rescales/modulus switches across all chunks, and the final scale. Scale/level mismatches at addition raise errors. Public coefficient encoding, alignment, arithmetic, relinearization, rescaling and trace counters are included in homomorphic-computation timing. Input normalization/validation, padding, reference allocation, setup/keys, verification, serialization, console output and file writing are excluded. The plaintext stage evaluates all normalized inputs in the same 1000-iteration batch convention used previously. All final slots are decoded; final padding is discarded outside the decode stage.
+
+Input and output storage use actual uncompressed SEAL serialization sizes. Raw input storage is N × sizeof(double), representing one numerical column. Maximum errors cover all records and measured runs; mean absolute error is averaged across those records and runs. Tests include every dataset and degree, independently calculated boundary outputs at z=-1/0/1, signed inputs, lengths 1/4097/8191/8192/8193, padding and invalid-domain rejection, plus all previous scenario regressions. Ciphertext noise and machine scheduling vary between executions; reported results are measurements of this configuration, not a clinical or universal precision guarantee.

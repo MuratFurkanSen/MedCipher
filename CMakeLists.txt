@@ -18,7 +18,7 @@ FetchContent_Declare(SEAL
     GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(SEAL)
 
-add_executable(MedCipher src/main.cpp src/crypto/ckks_smoke.cpp src/crypto/CKKSContext.cpp src/data/CSVReader.cpp src/scenarios/SumMean.cpp src/benchmark/Timing.cpp src/benchmark/Pipeline.cpp src/benchmark/Benchmark.cpp src/scenarios/Variance.cpp src/scenarios/VarianceReference.cpp src/scenarios/Relationships.cpp src/scenarios/RelationshipReference.cpp)
+add_executable(MedCipher src/main.cpp src/crypto/ckks_smoke.cpp src/crypto/CKKSContext.cpp src/data/CSVReader.cpp src/scenarios/SumMean.cpp src/benchmark/Timing.cpp src/benchmark/Pipeline.cpp src/benchmark/Benchmark.cpp src/scenarios/Variance.cpp src/scenarios/VarianceReference.cpp src/scenarios/Relationships.cpp src/scenarios/RelationshipReference.cpp src/scenarios/WeightedScoring.cpp src/scenarios/ScoringReference.cpp src/scenarios/Polynomial.cpp src/scenarios/PolynomialReference.cpp)
 target_link_libraries(MedCipher PRIVATE SEAL::seal)
 target_compile_definitions(MedCipher PRIVATE
     MEDCIPHER_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
@@ -35,5 +35,7 @@ if(BUILD_TESTING)
     add_test(NAME ckks_addition COMMAND MedCipher --smoke)
     add_test(NAME ckks_sum_mean COMMAND MedCipher)
     add_test(NAME ckks_relationships COMMAND MedCipher --relationships)
+    add_test(NAME ckks_scoring COMMAND MedCipher --scoring-check)
+    add_test(NAME ckks_polynomial COMMAND MedCipher --polynomial-check)
     add_test(NAME ckks_variance COMMAND MedCipher --variance-check)
 endif()

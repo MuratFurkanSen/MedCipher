@@ -3,6 +3,8 @@
 #include "scenarios/SumMean.h"
 #include "scenarios/Variance.h"
 #include "scenarios/Relationships.h"
+#include "scenarios/WeightedScoring.h"
+#include "scenarios/Polynomial.h"
 #include <vector>
 #include <cmath>
 #include "crypto/CKKSContext.h"
@@ -14,6 +16,22 @@
 
 int main(int argc, char** argv) {
     try {
+        if(argc==2 && std::string(argv[1])=="--polynomial-check"){
+            CKKSContext crypto(true,true);return polynomial_tests(crypto,MEDCIPHER_DATA_DIR)?0:1;
+        }
+        if(argc==2 && std::string(argv[1])=="--benchmark-polynomial"){
+            if(std::string(MEDCIPHER_BUILD_CONFIG)!="Release")throw std::runtime_error("Release required");
+            CKKSContext crypto(true,true);
+            return benchmark_polynomial(crypto,MEDCIPHER_DATA_DIR,std::string(MEDCIPHER_RESULTS_DIR)+"/scenario5.csv")?0:1;
+        }
+        if(argc==2 && std::string(argv[1])=="--scoring-check"){
+            CKKSContext crypto;return scoring_tests(crypto,MEDCIPHER_DATA_DIR)?0:1;
+        }
+        if(argc==2 && std::string(argv[1])=="--benchmark-scoring"){
+            if(std::string(MEDCIPHER_BUILD_CONFIG)!="Release")throw std::runtime_error("Release required");
+            CKKSContext crypto;
+            return benchmark_scoring(crypto,MEDCIPHER_DATA_DIR,std::string(MEDCIPHER_RESULTS_DIR)+"/scenario4.csv")?0:1;
+        }
         if (argc == 2 && std::string(argv[1]) == "--relationships") {
             CKKSContext crypto(true,true); return relationship_tests(crypto,MEDCIPHER_DATA_DIR) ? 0 : 1;
         }
@@ -60,11 +78,11 @@ int main(int argc, char** argv) {
             std::cout << "Boundary and constant fixtures: " << (passed ? "PASS" : "FAIL") << '\n';
             return passed ? 0 : 1;
         }
-        if (argc != 1) { std::cerr << "Usage: MedCipher [--smoke|--benchmark|--variance-check|--benchmark-variance]\n"; return 1; }
+        if (argc != 1) { std::cerr << "Usage: MedCipher [--smoke|--benchmark|--variance-check|--benchmark-variance|--relationships|--benchmark-strong|--scoring-check|--benchmark-scoring|--polynomial-check|--benchmark-polynomial]\n"; return 1; }
         bool pass = true;
         CKKSContext crypto(true);
-        for (unsigned n : {100u, 1000u, 10000u}) {
-            const std::string path = std::string(MEDCIPHER_DATA_DIR) + "/patients_" + std::to_string(n) + ".csv";
+        for (unsigned n : {1u, 10u, 100u}) {
+            const std::string path = std::string(MEDCIPHER_DATA_DIR) + "/patients_" + std::to_string(n) + "K.csv";
             const auto values = read_numeric_column(path, "heart_rate");
             if (values.size() != n) throw std::runtime_error("Unexpected record count in " + path);
             pass = run_sum_mean(crypto, values, path) && pass;
