@@ -14,6 +14,9 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <sstream>
+#include <filesystem>
+#include <unistd.h>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
@@ -53,14 +56,27 @@ static bool benchmark(CKKSContext& crypto, const std::string& data_dir, const st
     const std::string os = have_uname ? std::string(system.sysname) + " " + system.release : "unknown";
     const std::string arch = have_uname ? system.machine : "unknown";
     const auto cpu = cpu_model();
-    std::ofstream out(output_path, append ? std::ios::app : std::ios::out);
-    if (!out) throw std::runtime_error("Cannot write " + output_path);
-    if (!append) out << "scenario,dataset,column,records,poly_modulus_degree,coeff_modulus_bits,scale,slots,seal_version,build,compiler,os,architecture,cpu,warmups,runs,metric,unit,median,mean,population_stddev,input_ciphertext_bytes,raw_input_bytes,storage_ratio," << (polynomial ? "max_absolute_error,mean_absolute_error,max_relative_error,output_ciphertext_count,output_ciphertext_bytes,degree,coefficients,absolute_tolerance,ct_multiplicative_depth,rescale_depth,input_chain_index,output_chain_index,ct_multiplications,rescale_operations,modulus_switch_operations,output_scale,status\n" : scoring ? "max_absolute_error,mean_absolute_error,max_relative_error,output_ciphertext_count,output_ciphertext_bytes,weights,absolute_tolerance,status\n" : relationships ? "plaintext_covariance,encrypted_covariance,plaintext_correlation,encrypted_correlation,max_covariance_abs_error,max_covariance_rel_error,max_correlation_abs_error,max_correlation_rel_error,status\n" : variance ? "plaintext_variance,encrypted_variance,max_variance_abs_error,max_variance_rel_error,status\n" : "plaintext_sum,encrypted_sum,plaintext_mean,encrypted_mean,max_sum_abs_error,max_sum_rel_error,max_mean_abs_error,max_mean_rel_error,status\n");
+    namespace fs = std::filesystem;
+    fs::path destination(output_path);
+    if (destination.filename().empty() || !fs::is_directory(destination.parent_path())) throw std::runtime_error("Invalid output destination: " + output_path);
+    if (scoring && fs::exists(destination)) throw std::runtime_error("Refusing to overwrite scoring results: " + output_path);
+    for (unsigned n : std::vector<unsigned>{1000,10000,100000}) {
+        auto name = "patients_" + std::to_string(n/1000) + "K.csv";
+        auto path = data_dir + "/" + name;
+        auto values = read_numeric_column(path, polynomial ? "glucose" : "heart_rate");
+        if (values.size()!=n) throw std::runtime_error("Unexpected record count: " + name);
+        if (relationships && read_numeric_column(path,"systolic_bp").size()!=n) throw std::runtime_error("Invalid paired dataset");
+        if (scoring) for (const auto& c : load_score_columns(path)) if (c.size()!=n) throw std::runtime_error("Invalid scoring dataset");
+    }
+    std::ostringstream out;
+    if (append) { std::ifstream old(output_path); if (!old) throw std::runtime_error("Cannot read existing results"); out << old.rdbuf(); }
+    if (!append) out << "scenario,dataset,column,records,poly_modulus_degree,coeff_modulus_bits,scale,slots,seal_version,build,compiler,os,architecture,cpu,warmups,runs,metric,unit,median,mean,population_stddev,input_ciphertext_bytes,raw_input_bytes,storage_ratio," << (polynomial ? "max_absolute_error,mean_absolute_error,max_relative_error,output_ciphertext_count,output_ciphertext_bytes,degree,coefficients,absolute_tolerance,ct_multiplicative_depth,rescale_depth,input_chain_index,output_chain_index,ct_multiplications,rescale_operations,modulus_switch_operations,output_scale,status\n" : scoring ? "max_absolute_error,mean_absolute_error,max_relative_error,output_ciphertext_count,output_ciphertext_bytes,weights,absolute_tolerance,status\n" : relationships ? "plaintext_covariance,encrypted_covariance,plaintext_correlation,encrypted_correlation,max_covariance_abs_error,max_covariance_rel_error,max_correlation_abs_error,max_correlation_rel_error,status,variance_product,covariance_chain_index,correlation_chain_index,covariance_scale,correlation_scale\n" : variance ? "plaintext_variance,encrypted_variance,max_variance_abs_error,max_variance_rel_error,status\n" : "plaintext_sum,encrypted_sum,plaintext_mean,encrypted_mean,max_sum_abs_error,max_sum_rel_error,max_mean_abs_error,max_mean_rel_error,status\n");
     out << std::setprecision(17);
     std::vector<double> second_column;
     ScoreColumns score_columns;
     ScoringRun score_result;
     PolynomialRun polynomial_result;
+    RelationshipTrace relationship_trace;
     auto measure = [&](CKKSContext& ckks, const std::vector<double>& input) {
         if (polynomial) {
             polynomial_result=measure_polynomial(ckks,input,degree);
@@ -79,7 +95,7 @@ static bool benchmark(CKKSContext& crypto, const std::string& data_dir, const st
             common.input_ciphertext_bytes=score_result.measurement.input_ciphertext_bytes;
             common.passed=score_result.passed;return common;
         }
-        if (relationships) return measure_relationships(ckks, input, second_column);
+        if (relationships) return measure_relationships(ckks, input, second_column, &relationship_trace);
         if (!variance) return measure_sum_mean(ckks, input);
         const auto v = measure_variance(ckks, input);
         SumMeanRun common;
@@ -89,8 +105,8 @@ static bool benchmark(CKKSContext& crypto, const std::string& data_dir, const st
         return common;
     };
     bool all_passed = true;
-    for (unsigned n : {100u, 1000u, 10000u}) {
-        const std::string name = "patients_" + std::to_string(n) + ".csv";
+    for (unsigned n : std::vector<unsigned>{1000,10000,100000}) {
+        const std::string name = "patients_" + std::to_string(n/1000) + "K.csv";
         const auto values = read_numeric_column(data_dir + "/" + name, polynomial ? "glucose" : "heart_rate");
         if (values.size() != n) throw std::runtime_error("Unexpected record count: " + name);
         if (relationships) second_column = read_numeric_column(data_dir + "/" + name, "systolic_bp");
@@ -141,23 +157,34 @@ static bool benchmark(CKKSContext& crypto, const std::string& data_dir, const st
                     out<<','<<degree<<','<<coefficients<<",0.00001,"<<t.ciphertext_depth<<','<<t.rescale_depth
                        <<','<<t.input_level<<','<<t.output_level<<','<<t.multiplications<<','<<t.rescalings
                        <<','<<t.modulus_switches<<','<<t.output_scale<<','<<(passed?"PASS":"FAIL")<<'\n';
-                } else out<<",0.25;0.30;0.30;0.15,0.00001,"<<(passed?"PASS":"FAIL")<<'\n';
+                } else
+                out<<",0.25;0.30;0.30;0.15,0.00001,"<<(passed?"PASS":"FAIL")<<'\n';
                 continue;
             }
             out << ',' << last.plaintext_sum << ',' << last.encrypted_sum;
             if (!variance) out << ',' << last.plaintext_mean << ',' << last.encrypted_mean;
             out << ',' << max_sum_error << ',' << relative(max_sum_error, last.plaintext_sum);
             if (!variance) out << ',' << max_mean_error << ',' << relative(max_mean_error, last.plaintext_mean);
-            out << ',' << (passed ? last.status : "FAIL") << '\n';
+            out << ',' << (passed ? last.status : "FAIL");
+            if(relationships) out<<','<<relationship_reference(values,second_column).product<<','<<relationship_trace.covariance_level<<','<<relationship_trace.correlation_level<<','<<relationship_trace.covariance_scale<<','<<relationship_trace.correlation_scale;
+            out << '\n';
         }
         if(polynomial) std::cout<<"degree "<<degree<<" ";
         std::cout << name << ": " << (passed ? last.status : "FAIL")
                   << ", median encrypted total " << statistics(samples[6]).median << " ms, median evaluation " << statistics(samples[3]).median
                   << " ms, input ciphertext " << last.input_ciphertext_bytes << " bytes\n";
     }
-    out.close();
-    if (!out) throw std::runtime_error("Failed writing " + output_path);
-    return all_passed;
+    if (!all_passed || !out) return false;
+    auto pattern = (destination.parent_path() / ("." + destination.filename().string() + ".tmp.XXXXXX")).string();
+    std::vector<char> name(pattern.begin(),pattern.end()); name.push_back('\0');
+    int fd=mkstemp(name.data());
+    if(fd<0) throw std::runtime_error("Cannot create temporary results file");
+    auto contents=out.str(); std::size_t done=0;
+    while(done<contents.size()) { auto n=write(fd,contents.data()+done,contents.size()-done); if(n<=0) { close(fd); unlink(name.data()); throw std::runtime_error("Cannot write results"); } done+=static_cast<std::size_t>(n); }
+    if(close(fd)!=0) { unlink(name.data()); throw std::runtime_error("Cannot close results"); }
+    if(scoring) { if(link(name.data(),output_path.c_str())!=0) { unlink(name.data()); throw std::runtime_error("Cannot publish new scoring results"); } unlink(name.data()); }
+    else if(rename(name.data(),output_path.c_str())!=0) { unlink(name.data()); throw std::runtime_error("Cannot publish results"); }
+    return true;
 }
 
 bool benchmark_sum_mean(CKKSContext& crypto, const std::string& data_dir, const std::string& output_path) {
@@ -172,7 +199,47 @@ bool benchmark_relationships(CKKSContext& crypto, const std::string& data_dir, c
 bool benchmark_scoring(CKKSContext& crypto,const std::string& data_dir,const std::string& output_path){return benchmark(crypto,data_dir,output_path,3);}
 
 bool benchmark_polynomial(CKKSContext& crypto,const std::string& data_dir,const std::string& output_path){
-    bool passed=true;
-    for(int degree:{2,3,5})passed=benchmark(crypto,data_dir,output_path,4,degree,degree!=2)&&passed;
-    return passed;
+    namespace fs=std::filesystem;
+    fs::path dest(output_path);
+    if(dest.filename().empty() || !fs::is_directory(dest.parent_path()) || fs::exists(dest))
+        throw std::runtime_error("Invalid or existing polynomial results destination: " + output_path);
+    std::string pattern=(dest.parent_path()/("."+dest.filename().string()+".staging.XXXXXX")).string();
+    std::vector<char> temp(pattern.begin(),pattern.end()); temp.push_back('\0');
+    int fd=mkstemp(temp.data()); if(fd<0) throw std::runtime_error("Cannot create polynomial staging file");
+    close(fd);
+    try {
+        for(int degree:{2,3,5}) if(!benchmark(crypto,data_dir,temp.data(),4,degree,degree!=2)) { unlink(temp.data()); return false; }
+        if(link(temp.data(),output_path.c_str())!=0) throw std::runtime_error("Cannot publish polynomial results");
+        unlink(temp.data()); return true;
+    } catch(...) { unlink(temp.data()); throw; }
+}
+
+
+
+bool benchmark_all(const std::string& data_dir, const std::string& results_dir) {
+    namespace fs=std::filesystem;
+    fs::path dir(results_dir);
+    if(!fs::is_directory(dir)) throw std::runtime_error("Results directory does not exist");
+    const std::vector<std::string> names={"scenario1.csv","scenario2.csv","scenario3.csv","scenario4.csv","scenario5.csv"};
+    for(const auto& name:names) if(fs::exists(dir/name)) throw std::runtime_error("Results already exist: "+(dir/name).string());
+    auto pattern=(dir/".medcipher-benchmark.XXXXXX").string();
+    std::vector<char> tmp(pattern.begin(),pattern.end()); tmp.push_back('\0');
+    if(!mkdtemp(tmp.data())) throw std::runtime_error("Cannot create benchmark staging directory");
+    fs::path stage(tmp.data()); std::vector<fs::path> published;
+    try {
+        { CKKSContext crypto(true); if(!benchmark_sum_mean(crypto,data_dir,(stage/names[0]).string())) {fs::remove_all(stage);return false;} }
+        { CKKSContext crypto(true); if(!benchmark_variance(crypto,data_dir,(stage/names[1]).string())) {fs::remove_all(stage);return false;} }
+        { CKKSContext crypto(true,true); if(!benchmark_relationships(crypto,data_dir,(stage/names[2]).string())) {fs::remove_all(stage);return false;} }
+        { CKKSContext crypto; if(!benchmark_scoring(crypto,data_dir,(stage/names[3]).string())) {fs::remove_all(stage);return false;} }
+        { CKKSContext crypto(true,true); if(!benchmark_polynomial(crypto,data_dir,(stage/names[4]).string())) {fs::remove_all(stage);return false;} }
+        for(const auto& name:names) {
+            auto dest=dir/name;
+            if(link((stage/name).c_str(),dest.c_str())!=0) throw std::runtime_error("Cannot publish results: "+dest.string());
+            published.push_back(dest);
+        }
+        fs::remove_all(stage); return true;
+    } catch(...) {
+        for(const auto& path:published) {std::error_code error; fs::remove(path,error);}
+        std::error_code error; fs::remove_all(stage,error); throw;
+    }
 }
