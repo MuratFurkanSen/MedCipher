@@ -4,7 +4,16 @@
 #include <iostream>
 #include <numeric>
 #include <string>
+#include <vector>
+
+double plaintext_variance(const std::vector<double>& values);
+
 int main() {
+    if (plaintext_variance({1e12, 1e12, 1e12}) != 0.0 ||
+        std::abs(plaintext_variance({1e12 - 0.25, 1e12, 1e12 + 0.25, 1e12}) - 0.03125) > 1e-12 ||
+        std::abs(plaintext_variance({2, 4, 4, 4, 5, 5, 7, 9}) - 4.0) > 1e-12) {
+        std::cerr << "Variance reference failed\n"; return 1;
+    }
     const auto stats = statistics({1.0, 2.0, 3.0, 4.0});
     if (stats.median != 2.5 || stats.mean != 2.5 || std::abs(stats.stddev - std::sqrt(1.25)) > 1e-12) {
         std::cerr << "Statistics calculation failed\n"; return 1;

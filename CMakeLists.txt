@@ -28,7 +28,7 @@ target_compile_definitions(MedCipher PRIVATE
 
 include(CTest)
 if(BUILD_TESTING)
-    add_executable(verification tests/verification.cpp src/benchmark/Timing.cpp src/data/CSVReader.cpp)
+    add_executable(verification tests/verification.cpp src/benchmark/Timing.cpp src/data/CSVReader.cpp src/scenarios/VarianceReference.cpp)
     target_include_directories(verification PRIVATE src)
     target_compile_definitions(verification PRIVATE MEDCIPHER_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
     add_test(NAME reference_and_statistics COMMAND verification)
