@@ -68,7 +68,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
-        "--output-dir", type=Path, default=Path(__file__).resolve().parents[1] / "data"
+        "--output-dir", type=Path, default=Path(__file__).resolve().parents[2] / "data"
     )
     parser.add_argument("--sizes", type=int, nargs="+", default=[1000, 10000, 100000])
     args = parser.parse_args()
@@ -83,7 +83,8 @@ def main():
     for size in sorted(set(args.sizes)):
         subset = {name: values[:size] for name, values in master.items()}
         validate_dataset(subset, size)
-        path = args.output_dir / f"patients_{size}.csv"
+        name = f"{size // 1000}K" if size in (1000, 10000, 100000) else str(size)
+        path = args.output_dir / f"patients_{name}.csv"
         with path.open("w", newline="", encoding="utf-8") as output:
             writer = csv.writer(output)
             writer.writerow(subset)
