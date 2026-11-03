@@ -9,6 +9,7 @@ struct PipelineResult {
     std::array<double, 6> times{};
     std::vector<double> decoded;
     std::size_t input_ciphertext_bytes{};
+    std::size_t output_ciphertext_bytes{}, output_ciphertext_count{};
 };
 using EncryptedEvaluation = std::function<std::vector<seal::Ciphertext>(const std::vector<seal::Ciphertext>&)>;
-PipelineResult measure_pipeline(CKKSContext& crypto, const std::vector<double>& values, const EncryptedEvaluation& evaluate);
+PipelineResult measure_pipeline(CKKSContext& crypto, const std::vector<double>& values, const EncryptedEvaluation& evaluate, bool decode_all_slots = false);
