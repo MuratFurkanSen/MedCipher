@@ -11,6 +11,7 @@ public:
     seal::Plaintext encode(const std::vector<double>& values);
     seal::Ciphertext encrypt_plain(const seal::Plaintext& plain);
     seal::Plaintext decrypt(const seal::Ciphertext& value);
+    std::vector<double> decode(const seal::Plaintext& plain);
     double decode_first(const seal::Plaintext& plain);
     seal::Ciphertext encrypt(const std::vector<double>& values);
     double decrypt_first(const seal::Ciphertext& value);

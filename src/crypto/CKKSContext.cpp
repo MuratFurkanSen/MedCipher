@@ -31,10 +31,13 @@ seal::Plaintext CKKSContext::decrypt(const seal::Ciphertext& value) {
     seal::Decryptor(context_, keys_.secret_key()).decrypt(value, plain);
     return plain;
 }
-double CKKSContext::decode_first(const seal::Plaintext& plain) {
+std::vector<double> CKKSContext::decode(const seal::Plaintext& plain) {
     std::vector<double> decoded;
     encoder_.decode(plain, decoded);
-    return decoded.at(0);
+    return decoded;
+}
+double CKKSContext::decode_first(const seal::Plaintext& plain) {
+    return decode(plain).at(0);
 }
 seal::Ciphertext CKKSContext::encrypt(const std::vector<double>& values) {
     return encrypt_plain(encode(values));
