@@ -19,8 +19,12 @@
 namespace {
 // Only public evaluation material and ciphertexts enter this function.
 std::pair<seal::Ciphertext, seal::Ciphertext> evaluate(
-    const seal::SEALContext& context, const seal::GaloisKeys& galois,
-    const std::vector<seal::Ciphertext>& chunks, std::size_t slots, std::size_t count) {
+    const seal::SEALContext& context,
+    const seal::GaloisKeys& galois,
+    const std::vector<seal::Ciphertext>& chunks,
+    std::size_t slots,
+    std::size_t count) {
+
     seal::Evaluator evaluator(context);
     seal::Ciphertext total;
     bool first = true;
