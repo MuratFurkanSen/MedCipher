@@ -1,0 +1,221 @@
+{
+  "ckks": {
+    "scenarios_1_2_4": {
+      "coeff_modulus_bits": [
+        60,
+        40,
+        40,
+        60
+      ],
+      "poly_modulus_degree": 8192,
+      "scale": "2^40"
+    },
+    "scenarios_3_5": {
+      "coeff_modulus_bits": [
+        60,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        60
+      ],
+      "poly_modulus_degree": 16384,
+      "scale": "2^35"
+    }
+  },
+  "datasets": {
+    "patients_100K.csv": {
+      "records": 100000,
+      "sha256": "190450bfaf7c7466aa3471c1be6b88212e03007bb272bba9e96be26e4bdc29a9"
+    },
+    "patients_10K.csv": {
+      "records": 10000,
+      "sha256": "0ec40e221e36c4d9a49b6b25296dd4b77b4585a7bc662e0070502bd3c78619ad"
+    },
+    "patients_1K.csv": {
+      "records": 1000,
+      "sha256": "544e5c13d115118d173aa3c9a779aca8ac37faf0d078cff70090c0a0c7bb93ac"
+    }
+  },
+  "environment": {
+    "architecture": "arm64",
+    "build_configuration": "Release",
+    "compiler": "AppleClang 21.0.0.21000401",
+    "cpu": "Apple M5",
+    "os": "Darwin 27.2.0",
+    "seal": "4.1.2"
+  },
+  "generator": {
+    "configured_default_master_size": 100000,
+    "configured_default_seed": 42,
+    "historical_master_size": "unknown",
+    "historical_numpy": "unknown",
+    "historical_python": "unknown",
+    "historical_seed": "unknown",
+    "observed_numpy": "unknown",
+    "observed_python": "3.15.1"
+  },
+  "methodology": {
+    "measured_runs": 30,
+    "warmups": 5
+  },
+  "result_csv_sha256": {
+    "scenario1.csv": "c0b68af2dd979d68d560e044dab8fb05ad700d4fce2ffcae4d87627c2bc9a176",
+    "scenario2.csv": "bee50e909c33ab956468c1420ff0b0d315f20bc477dada29228d7c7fba33c203",
+    "scenario3.csv": "74ebcf53aaa4938ef96ab3dbe8b92d160d313705b28d1612ad601cd8e4d0509b",
+    "scenario4.csv": "ac2099376cdef9b87426d2a8be9d8da4191f6efe031ac50a3576b784c68f2f00",
+    "scenario5.csv": "63c1bfb4eb3e4953ec473e3ec981c450175656915361cf129b35f450054b2c65"
+  },
+  "source": {
+    "executable_sha256": "2fca6df6eb520514a099823d87ccfa9d7a84785fcf43ff7d2f1d4cae7676c8d1",
+    "git_commit": "67d0f1062d109283c11cbda9b85f2e60c6810913",
+    "git_state": "dirty",
+    "snapshot": {
+      "commit": "67d0f1062d109283c11cbda9b85f2e60c6810913",
+      "files": {
+        ".DS_Store": {
+          "sha256": "75a7b939b615c78e7c7b2b6045510ac955ac0ac066efe63ea8c20d9b97ebfcb3"
+        },
+        ".gitignore": {
+          "sha256": "1fbf1fe5f3b6ceebc55ed394e61395fa60294c46322d6a134ca2776a66cefa10"
+        },
+        "CMakeLists.txt": {
+          "sha256": "e485a5cdf29fd2958783b0cf2fc56c1c109346b72c907397fc8bd4650df085aa"
+        },
+        "README.md": {
+          "sha256": "ed6ae151eea24c6beed3d0f38d3f071ad11861d8d3b97b0fb2408f9c562e68d2"
+        },
+        "data/patients_100K.csv": {
+          "sha256": "190450bfaf7c7466aa3471c1be6b88212e03007bb272bba9e96be26e4bdc29a9"
+        },
+        "data/patients_10K.csv": {
+          "sha256": "0ec40e221e36c4d9a49b6b25296dd4b77b4585a7bc662e0070502bd3c78619ad"
+        },
+        "data/patients_1K.csv": {
+          "sha256": "544e5c13d115118d173aa3c9a779aca8ac37faf0d078cff70090c0a0c7bb93ac"
+        },
+        "results/.gitkeep": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "src/.DS_Store": {
+          "sha256": "3a4315d3f82f22b3d4b9600b03777d430ad5ab0fb38f9b9116cbe91de3f3a6c7"
+        },
+        "src/benchmark/.gitkeep": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "src/benchmark/Acceptance.h": {
+          "sha256": "25779a77d25d8de9fcfe73dd496254d088ff10d46a5b0830d2508da935d335c8"
+        },
+        "src/benchmark/Benchmark.cpp": {
+          "sha256": "79189a5c67da9a66973b67d6a9ce993bb64d895fc62700edd5888809b913fc8f"
+        },
+        "src/benchmark/Benchmark.h": {
+          "sha256": "4d9c02612393f679de15000f9f8a7e6a7f1443ce5ef57d95e1e7f8d995b40491"
+        },
+        "src/benchmark/Pipeline.cpp": {
+          "sha256": "110b29dbdde4c4bc39d378cdf2e3f3f9311330b51ad80d11c318806328e012f3"
+        },
+        "src/benchmark/Pipeline.h": {
+          "sha256": "f9b3eea11ce79a04d970961f83341171ffefb878deb2a5cfa0b3fb6f5d80f3fd"
+        },
+        "src/benchmark/Timing.cpp": {
+          "sha256": "7b0b8780125f4419eedc4716c3a8f1df529907612de27a0630ed8027d8c7a83c"
+        },
+        "src/benchmark/Timing.h": {
+          "sha256": "211d0e25439fbb54c1c2a96292e2e3ab61266e39a462bea7e09533ca223b4b42"
+        },
+        "src/benchmark/provenance.py": {
+          "sha256": "081fa606e24df33175c03f74c7cdb64ce16b10f9434ea8da10309e4b0448f955"
+        },
+        "src/crypto/CKKSContext.cpp": {
+          "sha256": "6af2a90f9a514e4015b1ea9404c08c27d96457e8bace02255b67e59914331f45"
+        },
+        "src/crypto/CKKSContext.h": {
+          "sha256": "447cf6bc6c79bb262e90e2006f6d67a4eccd07d5e8554964636e52d5d43fc323"
+        },
+        "src/crypto/Evaluation.h": {
+          "sha256": "7eefd8e021e3d51d8472b99c237551bc4736540a9d0d2a15c2d9231e5b871991"
+        },
+        "src/crypto/ckks_smoke.cpp": {
+          "sha256": "a1b066e0d0883c875ccd65f497e81fbd8a2a32ef13f9020986e4529a1c638ebc"
+        },
+        "src/crypto/ckks_smoke.h": {
+          "sha256": "10cf00a28fcb6b5eaba30464e524b16a7c654ba2f9e9bb9c3e5386d4928f160a"
+        },
+        "src/data/CSVReader.cpp": {
+          "sha256": "e5547c32f85c1517687f21c0573a6487f0aecddd3ec7a310b2ac41478c4fccd4"
+        },
+        "src/data/CSVReader.h": {
+          "sha256": "feb0b60a50c9bdd0094cc0687f02bf86af90fb57ca84e41fa7acc6915a71aa15"
+        },
+        "src/main.cpp": {
+          "sha256": "ca3f3b90a5135706198df8cf6ebc48beab7a390568dee0bbf5a073fe87cb9102"
+        },
+        "src/scenarios/.gitkeep": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "src/scenarios/Polynomial.cpp": {
+          "sha256": "ca605d4191813a202f303800244487728cb1293e1122f3a82c92c4fb9a521df3"
+        },
+        "src/scenarios/Polynomial.h": {
+          "sha256": "00fe800de2bb159d591445a9cbb01235d53dd05038d9e581a6bbd7c00e08467a"
+        },
+        "src/scenarios/PolynomialReference.cpp": {
+          "sha256": "fef145e026036216e764f9323f4c0d88c55ee539274e78f1bb10c89a7ec37dbc"
+        },
+        "src/scenarios/RelationshipReference.cpp": {
+          "sha256": "0f7896148e100626f415039f83a241fd1f8e0e419fb243bfd415a5bd8bb9f979"
+        },
+        "src/scenarios/Relationships.cpp": {
+          "sha256": "3a05a7f4fa8b26be513cf7deff92bce420804333d3c728a244fe69eb7a68b02d"
+        },
+        "src/scenarios/Relationships.h": {
+          "sha256": "3c17e75a53defa28d4f7dcc770e929d7ec986f87d81ad68935e07b21d64b32b1"
+        },
+        "src/scenarios/ScenarioChecks.cpp": {
+          "sha256": "e455c81824e098b311e4d575f14227169c7e13fd66cab237d31d5f8712cb7d56"
+        },
+        "src/scenarios/ScenarioChecks.h": {
+          "sha256": "9a07d5e5c811e18bf4b532b129458b94af5fc7275618526a374dbc38047d3a3a"
+        },
+        "src/scenarios/ScoringReference.cpp": {
+          "sha256": "8141f4743a3ea48d35eda67a8dac3aa9f9c41f78f0653bbae2490b7178b44a40"
+        },
+        "src/scenarios/SumMean.cpp": {
+          "sha256": "c78fd7412cbe2d3b1cff756cdc5e535df3751434e2aca04b34a18489d85dc690"
+        },
+        "src/scenarios/SumMean.h": {
+          "sha256": "81b1aa17e71958d2ef5c40b7b8af6f661e019f25a113cd56b61827c72ed2fce6"
+        },
+        "src/scenarios/Variance.cpp": {
+          "sha256": "01c3f13ef0e2bcbc9a9b88980c2ef8e46b79bd583b5fd475246a4f43be427733"
+        },
+        "src/scenarios/Variance.h": {
+          "sha256": "5d71196a0b8b24973d72a91508d35373e05aab35834374e2d00ccc67e49b2354"
+        },
+        "src/scenarios/VarianceReference.cpp": {
+          "sha256": "d46782da7f33c08a272d5b90f3859a0759e539e52fb8b1917e17e2e605db020b"
+        },
+        "src/scenarios/WeightedScoring.cpp": {
+          "sha256": "0c135a88ddb9945e2fa64741dc77333053e0f3d9d67ed2548b0943555c984f7c"
+        },
+        "src/scenarios/WeightedScoring.h": {
+          "sha256": "826da2c7e69755c5004e16e44ca203f05a4daa532cf41544dd61f1307b9eb8f1"
+        },
+        "src/scripts/generate_dataset.py": {
+          "sha256": "cc4a9642bb8800ee8206f6ee092fdcaacc8ea417f8d8b02cf5213ca30dde9e74"
+        },
+        "tests/verification.cpp": {
+          "sha256": "d9727b41f2690f186dd50553f65692cef3c7971c40fea709c1802a5162a2ba87"
+        }
+      },
+      "status_porcelain": " M .DS_Store\n?? src/.DS_Store\n"
+    },
+    "snapshot_sha256": "61cd1b676444cfb402c90e37b6d0a914ce0efd2fd517a497880cc0162b9f3128"
+  }
+}
